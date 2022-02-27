@@ -1,0 +1,18 @@
+进程：资源分配的基本单位
+线程：调度的基本单位
+无论是进程还是线程，在linux中都以tas_struct描述，从内核角度看线程和进程本质无区别
+Glibc中的pthread库中提供NPTL（Native POSIX Threading Library）支持
+
+进程所拥有的资源：（此结构体被叫为task_struct）
+    mm： memory module内存模块
+    fs： 文件系统
+    files： 这个进程所打开的文件
+    signal： 进程所接收的信号量
+
+进程一般都是由他的父进程通过fock构建出来的
+
+不同进程间的重要资源相互独立（mm, fs, files, signal）
+不同线程间的重要资源相互共享
+
+用户线程：
+    无需内核帮助，应用程序在用户空间创建的可执行单元，创建和销毁都在用户态完成

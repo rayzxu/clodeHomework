@@ -1,0 +1,21 @@
+TCMalloc
+    page: 内存页，一块8K大小的内存空间。Go与操作系统之间的内存神器和释放，都是以page为单位的
+    span：内存块，一个或多个连续的page组成一个span
+    sizeclass：空间规格，每个span都带有一个sizeclass，标记着该span中的page应该如何使用
+    object：对象，用来存储一个变量数据内存空间，一个span在初始化时，会被切割成一堆等大的object；假设object的大小是16B，span大小是8K，那么就会把
+        span中的page初始化8K/16B = 512 个obejct，所谓内存分配，就是分配一个object出去。
+
+    对象大小定义：
+        小对象大小：0～256KB
+        中对象大小：256KB～1MB
+        大对象大小：> 1MB
+    
+    小对象的分配流程：
+        ThreadCache（线程本地的缓存分配出去，无锁） -> CentralCache -> HeapPage, 大部分时候，ThreadCache缓存都是足够的，不需要去访问CentralCache和heapPage，
+        无系统调用配合，无锁分配，效率高
+
+    中对象的分配流程：
+        直接去pageHeap申请，
+
+    大对象的分配流程：
+        从large span set选择合适数量的页面组成span，用来储存数据
