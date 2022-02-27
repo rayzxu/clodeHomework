@@ -1,0 +1,79 @@
+线程安全：
+    CPU多核架构
+    共享内存
+    线程可能会被调度到多个CPU上面
+    CPU对某一内存的键值的修改会先修改到本地缓存，缓存不会把这个修改立即写回到内存里面，
+    此时在其他线程内看到的值依然是原值。此时对同一个内存地址，CPU读取到的值就不一样了，因为缓存并未同步
+
+    如何解决这个问题：
+        加锁：在加锁后再去修改，这个数据会被同步到内存里面去，线程访问这个内存的时候也需要加锁（互斥锁：加锁后其他线程无法访问这块内存）
+
+锁：
+    多线程通讯：
+        鼓励使用channel，一边发一边接;
+        Go语言也支持基于共享内存的多线程数据访问:
+            Sync包提供了锁的基本原语
+                sync.Mutex互斥锁
+                    Lock()加锁，Unlock()解锁
+                sync.RWMutex读写分离锁
+                    不限制并发读（RLock不互斥），只限制并发写和并发读写
+                sync.WaitGroup
+                    等待一组goroutine返回 go func关键词创建的携程？
+                sync.Once
+                    保证某段代码只执行一次
+                sync.Cond
+                    让一组goroutine在满足特定条件的情况时被唤醒
+
+    Mutex互斥锁 示例
+        func (f *sharedInformerFactory) Start(stopCh <- chan struct{}) {
+            f.lock.Lock()
+            defer f.lock.Unlock()
+            for informerType, informer := range f.informers {
+                if !f.startedInformers[informerType] {
+                    go informer.Run(stopCh)
+                    f.startedInformers[informerType] = true
+                }
+            }
+        }
+
+    WaitGroup 主进程会起多个子线程，期望多个子线程都处理完之后主进程才继续
+    WaitGroup 示例：
+        func (c *PodClient) CreateBatch(pods []*v1.Pod) []*v1.Pod {
+            ps := make( []*v1.Pod, len(pods))
+            var wg sync.WaitGroup
+            for i, pod := range pods {
+                wg.Add(1)
+                go func(i int, pod *v1.Pod) {
+                    defer wg.Done()
+                    defer GinkgoRecover()
+                    ps[i] = c.CreateSync(pod)
+                }(i, pod) // 子线程 + 闭包
+            }
+            wg.Wait()
+            return ps
+        }
+    
+    Cond示例：
+        func (q *Type) Add(item interface{}) {
+            q.cond.L.Lock()
+            defer q.cond.L.Unlock()
+            if q.shuttingDown {
+                return
+            }
+            if q.dirty.has(item) {
+                return
+            }
+            q.metrics.add(item)
+            q.dirty.insert(item)
+            if q.processing.has(item) {
+                return
+            }
+            q.queue = append(q.queue, item)
+            q.cond.Signal()
+        }
+
+线程加锁的方法
+    WaitBySleep： time.Sleep(time.Secend) // 局限性
+    WaitByChannel：主子线程共享channel，或者线程间共享channel
+    WaitByWaitGroup：通过WaitGroup实例的Add( *int )方法添加计数，再通过Done()方法将WaitGroup计数减一，WaitGroup.wait()方法开始等待
+    Cond: kubrnetes中的队列，标准的生产者消费者模式 sync.NewCond(&sync.Mutex{}) q.cond.l.Lock() q.cond.l.Unlock() q.cond.Broadcast() q.cond.Wait()

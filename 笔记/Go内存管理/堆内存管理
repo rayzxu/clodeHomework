@@ -1,0 +1,27 @@
+堆内存管理可能遇到的问题：
+    内存分配需要系统调用，在频繁内存分配时，系统性能比较低
+    多线程共享相同的内存空间，同时申请内存时，需要加锁，否则会发生同一块内存被多个线程访问的情况
+    内存碎片的问题，经过不断的内存分配和回收，内存的碎片会比较严重，内存的使用效率降低
+
+堆内存管理：
+    AMC：
+        Allocator：内存分配器，处理动态内存分配请求（内存的预分配，allocator会申请一个连续的内存块作为堆）
+        Mutator：用户程序，通过Allocator创建对象，分配完成之后会对分配的内存进行标记（用户程序向系统申请内存之后，Allocator会分配内存给Mutator）
+        Collector：垃圾回收器，回收内存空间
+
+    初始化连续内存块作为堆
+    有内存申请的时候，Allocator从堆内存的未分配区域分割小块内存
+    用链表将已分配内存链接起来
+    需要信息描述每个内存块的元数据：大小，是否使用，下一个内存块的地址
+
+    TCMalloc:(go语言脱胎于TCMlloc)
+        1. TCMalloc通过预分配解决效率低的问题
+        2. 会为每一个线程维护了一个本地的ThreadCache，是每一个线程的独立内存空间。ThreadCache是独立存在的所以无需加锁
+        3. 如果ThreadCache的空间被耗尽，ThreadCache会向CentralCache申请更多的空间
+        4. 大部分的申请都是从ThreadCache上进行申请的，大部分请求不需要加锁，只有ThreadCache内存耗尽向CentralCache申请更多内存时才会加锁
+        5. 如果CentralCache也没有空间，会向PageHeap上申请空间
+        6. 如果pageHeap也没有剩余空间了，它会向Virtual Memory申请更多的空间
+        7. TCMalloc会把整个的内存分为不同的等级叫做Size class，他会把申请到的内存按照不同的size class去划分（TCMalloc一共分了128个等级）
+        8. size class：一个8k大小的页，它会按照固定大小去做格式化
+        9. 相同大小的size class 会组成一个链表叫做span class
+        Virtual Memory: 虚拟内存 任何进程在启动后都会有一个虚拟地址
