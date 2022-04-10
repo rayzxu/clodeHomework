@@ -1,0 +1,54 @@
+Kubernetes的主节点：
+    API服务器（API Server）：
+        是Kubernetes里面唯一带有用户可访问API以及用户可交互的组件。API服务器会暴露一个RESTful的Kubernetes API 
+        并使用JSON格式的清单文件。
+    群的数据储存（Cluster Data Store）：
+        Kubernetes使用“etcd”。这是一个强大的、稳定的、高可用的键值储存，被Kubernetes用于长久储存所有的API对象。
+    控制管理器（control manager）：
+        被称为“kube-controller manager”，它运行着所有处理集群日常任务的控制器，
+        包括了节点控制器、副本控制器、端点控制器以及服务账户等。
+    调度器（Scheduler）：
+        调度器会监控新建的pods（一组或一个容器）并将其分配给节点。
+
+etcd（分布式存储）（消息机制）：
+    etcd是CoreOS基于Raft开发的分布式key-value储存，可用于服务发现、共享配置及一次性保障
+    （如数据库选主、分布式锁等）
+    1. 基本的key-value储存。
+    2. 监听机制。
+    3. key的过期及续约机制，用于监控和服务发现。
+    4. 原子CAS和CAD，用于分布式锁和leader选举。
+
+    分布式存储一般要做两件事情：1 选主，所有写操作应该经过master，2 master在接受到写操作后会把这些指令下发到
+    下级节点上。其他节点要通过某种机制来保证跟leader同步。
+
+API Server（）：
+    API Server是K8s的核心组件，主要提供以下功能
+        1. 提供集群管理的REST API接口： 包括
+            认证 Authentication
+            授权 Authorization
+            准入 Admission (Mutating & Valiating)
+        2. 提供其他模块之间的数据交互和通信的枢纽（其他模块通过APIServer查询或修改数据，只有APIServer才直接操作etcd）
+        3. APIServer 提供etcd数据缓存以减少集群对etcd的访问
+
+Controller manager:
+    控制器先去读用户的抽象对象，每个抽象对象里面有用户的期望状态（Desire State）。然后去做真实的配置。如果出现了
+    错误将会触发自动重试以确保最终一致性。
+
+    1. controller manager是集群的大脑，是保证整个集群动起来的关键
+    2. 作用是确保Kubernets遵循声明式系统规范，确保系统的真实状态与用户定义的期望状态一致
+    3. Controller Manager是多个控制器的组合，每个Controller事实上都是一个control loop，负责侦听其管控的对象，当对象
+    发生变更时完成配置。
+    4. Controller配置失败通常会触发自动重试，整个集群会在控制器不断重试的机制下确保一致性。
+
+CRI: container runtime interface
+CNI: container network interface
+CSI: container storage interface
+
+Scheduler: 
+    1. Scheduler是特殊的Controller工作原理与其他控制器无差别
+    2. Scheduler的特殊职责在于监控当前集群所有未调度的Pod，并且获取当前集群所有的节点的健康状况和
+    资源使用情况，为带调度Pod选择最佳的计算节点，完成调度。
+        调度阶段分为：
+            Predict: 过滤不能满足业务需求的节点，如资源不足，端口冲突等。
+            Priority: 按既定要素将满足调度需求的节点评分，选择最佳节点。
+            Bind: 将计算节点与Pod绑定，完成调度。

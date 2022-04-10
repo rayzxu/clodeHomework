@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: httpserver
+  labels:
+    app: httpserver
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: httpserver
+  template:
+    metadata:
+      labels:
+        app: httpserver
+    spec:
+      imagePullSecrets:
+      - name: cloudnative
+      containers:
+      - name: httpserver
+        image: rayzxu/httpserver:v1
+        ports:
+        - containerPort: 8080
+        # 优雅启动
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 3
+        startupProbe:
+          httpGet:
+            path: /healthz
+            port: liveness-port
+          failureThreshold: 30
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+            httpHeaders:
+            - name: Custom-Header
+              value: Awesome
+          initialDelaySeconds: 3
+          periodSeconds: 3
+        #优雅终止 不要用kill 15
+        lifecycle:
+          preStop:
+            exec:
+              command: ["kill", "9", "1"]
+        # QOS
+        limits:
+          memory: "20Mi"
+          cpu: "200m"
+        requests:
+          memory: "10Mi"
+          cpu: "200m"
+        # 配置和代码分离
+        env:
+          - name: VERSION
+          valueFrom:
+            configMapKeyRef:
+              name: httpserver
+              key: version
