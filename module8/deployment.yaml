@@ -19,6 +19,14 @@ spec:
       containers:
       - name: httpserver
         image: rayzxu/httpserver:v1
+        # QOS
+        resources:
+          limits:
+            memory: "20Mi"
+            cpu: "200m"
+          requests:
+            memory: "10Mi"
+            cpu: "200m"
         ports:
         - containerPort: 8080
         # 优雅启动
@@ -49,16 +57,9 @@ spec:
           preStop:
             exec:
               command: ["kill", "9", "1"]
-        # QOS
-        limits:
-          memory: "20Mi"
-          cpu: "200m"
-        requests:
-          memory: "10Mi"
-          cpu: "200m"
         # 配置和代码分离
         env:
-          - name: VERSION
+        - name: VERSION
           valueFrom:
             configMapKeyRef:
               name: httpserver
